@@ -129,6 +129,7 @@ Row 1: [empty except: Wolf(D1) is NOT placed - Wolf at C1]
   - Tiger at C4 can jump to C7 (if A5, A6 have no Rat)
   - Lion at A3 can jump to A7 (if A4, A5, A6 have no Rat)
   
+
 **Rat Swimming (游泳)**:
 - Rat can move from land to water, water to water, or water to land
 - Rat in water can attack pieces on land (see Capture Rules)
@@ -816,16 +817,6 @@ public class Board {
     // ...
 }
 ```
-
----
-
-## Estimated Timeline
-- **Week 1**: Model + Console prototype
-- **Week 2**: Save/Load + Undo + Basic GUI
-- **Week 3**: Replay + Full GUI + Testing
-- **Week 4**: Polish + Documentation
-
-**Total**: 3-4 weeks for maximum score implementation
 
 ---
 
