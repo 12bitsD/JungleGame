@@ -1,238 +1,231 @@
-# Jungle Game (斗兽棋)
+# 斗兽棋 (Jungle Game)
 
-A Python implementation of the traditional Chinese board game "Dou Shou Qi" (Jungle Game).
+传统中国棋类游戏"斗兽棋"的 Python 实现。
 
-## Features
+## 功能特性
 
-✅ **Complete Game Rules**
-- All 8 pieces with proper hierarchy (Elephant, Lion, Tiger, Leopard, Wolf, Dog, Cat, Rat)
-- Special rules: Rat defeats Elephant, Lion/Tiger can jump rivers, Rat can swim
-- Trap and Den mechanics
-- Win/Draw conditions (Den occupation, no legal moves, 50-move rule, threefold repetition)
+✅ **完整的游戏规则**
+- 8 种棋子及正确的等级系统（象、狮、虎、豹、狼、狗、猫、鼠）
+- 特殊规则：鼠吃象、狮虎跳河、鼠能游泳
+- 陷阱和兽穴机制
+- 胜负条件（占领兽穴、无合法移动、50步规则、三次重复）
 
-✅ **MVC Architecture**
-- Separate `model/`, `view/`, and `controller/` packages
-- Model layer completely independent of UI
-- Follows all specification requirements
+✅ **MVC 架构**
+- 独立的 `model/`、`view/` 和 `controller/` 包
+- Model 层完全独立于界面
+- 符合所有规格要求
 
-✅ **Save/Load System**
-- Save games to JSON format
-- Load previous games and continue playing
-- Automatic timestamp recording
+✅ **存档/读档系统**
+- 以 JSON 格式保存游戏
+- 加载之前的游戏继续进行
+- 自动记录时间戳
 
-✅ **Undo/Redo** 
-- Undo up to 10 moves
-- Redo undone moves
-- State preservation for captures
+✅ **撤销/重做** 
+- 撤销最多 10 步
+- 重做已撤销的移动
+- 保存吃子状态
 
-✅ **Replay System**
-- Step through game history
-- Auto-play with speed control
-- Jump to specific moves
+✅ **回放系统**
+- 逐步浏览游戏历史
+- 自动播放并可调速
+- 跳转到指定步数
 
-## Project Structure
+## 项目结构
 
 ```
 JungleGame/
-├── model/                  # Model layer (game logic)
+├── model/                  # Model 层（游戏逻辑）
 │   ├── __init__.py
-│   ├── piece.py           # Piece types and properties
-│   ├── board.py           # 7×9 board with terrain
-│   ├── move.py            # Move validation
-│   └── game_state.py      # Game state management
-├── view/                   # View layer (display)
+│   ├── piece.py           # 棋子类型和属性
+│   ├── board.py           # 7×9 棋盘和地形
+│   ├── move.py            # 移动验证
+│   └── game_state.py      # 游戏状态管理
+├── view/                   # View 层（显示）
 │   ├── __init__.py
-│   ├── cli_view.py        # Console interface
-│   └── replay_engine.py   # Replay functionality
-├── controller/             # Controller layer
+│   ├── cli_view.py        # 命令行界面
+│   └── replay_engine.py   # 回放功能
+├── controller/             # Controller 层
 │   ├── __init__.py
-│   └── game_controller.py # Main game logic controller
-├── main.py                 # Entry point
-├── test_game.py            # Unit tests
-└── README.md               # This file
+│   └── game_controller.py # 主游戏控制器
+├── main.py                 # 程序入口
+├── test_game.py            # 单元测试
+└── README.md               # 本文件
 ```
 
-## Requirements
+## 运行环境
 
 - Python 3.7+
-- No external dependencies (uses only standard library)
+- 无需外部依赖（仅使用标准库）
 
-## Installation
+## 安装说明
 
-No installation required! Just run:
+无需安装！直接运行即可：
 
 ```bash
 python3 main.py
 ```
 
-## How to Play
+## 如何游玩
 
-### Starting the Game
+### 启动游戏
 
 ```bash
 cd /Users/bits12/Desktop/JungleGame
 python3 main.py
 ```
 
-### Commands
+### 游戏命令
 
-- **move <from> <to>** - Make a move
-  - Example: `move E3 E4` (move piece from E3 to E4)
+- **move <起点> <终点>** - 移动棋子
+  - 示例：`move E3 E4`（将 E3 的棋子移动到 E4）
   
-- **show <position>** - Show legal moves for a piece
-  - Example: `show E3` (show where E3 piece can move)
+- **show <位置>** - 显示该位置棋子的合法移动
+  - 示例：`show E3`（显示 E3 棋子可以移动到哪里）
   
-- **undo** - Undo last move (up to 10 levels)
+- **undo** - 撤销上一步（最多 10 步）
   
-- **redo** - Redo previously undone move
+- **redo** - 重做已撤销的移动
   
-- **history** - Display move history
+- **history** - 显示移动历史
   
-- **save <filename>** - Save current game
-  - Example: `save mygame` (saves to mygame.json)
+- **save <文件名>** - 保存当前游戏
+  - 示例：`save mygame`（保存为 mygame.json）
   
-- **load <filename>** - Load saved game
-  - Example: `load mygame` (loads mygame.json)
+- **load <文件名>** - 加载已保存的游戏
+  - 示例：`load mygame`（加载 mygame.json）
   
-- **new** - Start a new game
+- **new** - 开始新游戏
   
-- **replay** - Enter replay mode
-  - In replay mode:
-    - `next` or `n` - Step forward
-    - `prev` or `p` - Step backward
-    - `goto <num>` - Jump to move number
-    - `play` - Auto-play remaining moves
-    - `exit` or `e` - Exit replay mode
+- **replay** - 进入回放模式
+  - 回放模式命令：
+    - `next` 或 `n` - 前进一步
+    - `prev` 或 `p` - 后退一步
+    - `goto <数字>` - 跳转到指定步数
+    - `play` - 自动播放剩余步数
+    - `exit` 或 `e` - 退出回放模式
   
-- **quit** - Exit game
+- **quit** - 退出游戏
 
-### Board Notation
+### 棋盘坐标
 
-- **Columns**: A-G (left to right)
-- **Rows**: 1-9 (bottom to top, RED at bottom)
-- **Example positions**: E3, D1, G7
+- **列**：A-G（从左到右）
+- **行**：1-9（从下到上，红方在底部）
+- **位置示例**：E3, D1, G7
 
-### Piece Symbols
+### 棋子符号
 
-- **RED (lowercase)**:
-  - `r` = Rat, `c` = Cat, `d` = Dog, `w` = Wolf
-  - `l` = Leopard, `t` = Tiger, `n` = Lion, `e` = Elephant
+- **红方（小写）**：
+  - `r` = 鼠，`c` = 猫，`d` = 狗，`w` = 狼
+  - `l` = 豹，`t` = 虎，`n` = 狮，`e` = 象
   
-- **BLUE (UPPERCASE)**:
-  - `R` = Rat, `C` = Cat, `D` = Dog, `W` = Wolf
-  - `L` = Leopard, `T` = Tiger, `N` = Lion, `E` = Elephant
+- **蓝方（大写）**：
+  - `R` = 鼠，`C` = 猫，`D` = 狗，`W` = 狼
+  - `L` = 豹，`T` = 虎，`N` = 狮，`E` = 象
 
-### Terrain Symbols
+### 地形符号
 
-- `·` = Normal land
-- `≈` = Water (river)
-- `△` = Trap
-- `■` = Den
+- `·` = 普通陆地
+- `≈` = 水域（河流）
+- `△` = 陷阱
+- `■` = 兽穴
 
-## Game Rules Summary
+## 游戏规则概要
 
-### Movement
-- All pieces move 1 square orthogonally (up/down/left/right)
-- Lion and Tiger can jump across rivers (3 squares)
-- Only Rat can enter water
+### 移动规则
+- 所有棋子每次移动 1 格（上/下/左/右，不能斜走）
+- 狮和虎可以跳过河流（3 格宽）
+- 只有鼠可以进入水域
 
-### Capture Rules
-- Higher rank captures lower/equal rank
-- **Special**: Rat (rank 1) defeats Elephant (rank 8)
-- **Special**: Elephant cannot capture Rat
-- Pieces in opponent's trap have rank 0 (can be captured by any piece)
-- Rat in water cannot be captured by land pieces
+### 吃子规则
+- 高等级吃低等级或同等级
+- **特殊**：鼠（等级 1）可以吃象（等级 8）
+- **特殊**：象不能吃鼠
+- 在对方陷阱中的棋子等级为 0（可被任何棋子吃掉）
+- 水中的鼠不能被陆地棋子吃掉
 
-### Win Conditions
-1. Enter opponent's den
-2. Opponent has no legal moves
+### 获胜条件
+1. 进入对方兽穴
+2. 对方无合法移动
 
-### Draw Conditions
-1. 50 consecutive moves without capture
-2. Same position occurs 3 times
+### 平局条件
+1. 连续 50 步无吃子
+2. 同一局面出现 3 次
 
-## Testing
+## 测试
 
-Run the test suite:
+运行测试套件：
 
 ```bash
 python3 test_game.py
 ```
 
-Tests cover:
-- Board setup
-- Basic movement
-- Invalid move detection
-- Special rules (Rat vs Elephant)
-- Water movement
-- Undo/Redo functionality
-- Save/Load functionality
+测试覆盖：
+- 棋盘初始化
+- 基本移动
+- 非法移动检测
+- 特殊规则（鼠吃象）
+- 水域移动
+- 撤销/重做功能
+- 存档/读档功能
 
-## Example Game Session
+## 游戏示例
 
 ```
 $ python3 main.py
 
 Enter command: move E3 E4
-✓ Move successful
+✓ 移动成功
 
 Enter command: show G7
-Legal moves for Lion at G7:
+狮 at G7 的合法移动：
   G6
   F7
 
 Enter command: move G7 G6
 
 Enter command: history
---- Last 10 Moves ---
-  1. RED Rat E3→E4
-  2. BLUE Lion G7→G6
+--- 最近 10 步移动 ---
+  1. RED 鼠 E3→E4
+  2. BLUE 狮 G7→G6
 
 Enter command: save game1
-✓ Game saved to game1.json
+✓ 游戏已保存到 game1.json
 
 Enter command: undo
-✓ Move undone
+✓ 移动已撤销
 
 Enter command: replay
-[Enters replay mode with step-by-step controls]
+[进入回放模式，可逐步控制]
 ```
 
-## Development Notes
+## 开发说明
 
-### Code Style
-- Follows PEP8 guidelines
-- Type hints used for clarity
-- Docstrings for all classes and methods
+### 代码风格
+- 遵循 PEP8 规范
+- 使用类型提示增强可读性
+- 所有类和方法都有文档字符串
 
-### Architecture
-- **Model**: Pure game logic, no UI dependencies
-- **View**: Display and input handling
-- **Controller**: Coordinates model and view
+### 架构设计
+- **Model 层**：纯游戏逻辑，无界面依赖
+- **View 层**：显示和输入处理
+- **Controller 层**：协调 Model 和 View
 
-### Extension Points
-- Easy to add GUI (tkinter) by creating new view class
-- AI player can be added by extending controller
-- Network multiplayer possible by extending model
+### 扩展点
+- 可通过创建新 View 类轻松添加 GUI（tkinter）
+- 可通过扩展 Controller 添加 AI 玩家
+- 可通过扩展 Model 实现网络对战
 
-## Specification Compliance
+## 规格符合度
 
-This implementation strictly follows the project specification:
+本实现严格遵循项目规格文档：
 
-- ✅ Complete game rules (§ Appendix B)
-- ✅ All user stories US1-US10 (§ Appendix C)
-- ✅ MVC architecture with separate model package
-- ✅ Standard library only (no external dependencies)
-- ✅ Save/Load in JSON format
-- ✅ Undo/Redo (10 levels)
-- ✅ Replay system with controls
-- ✅ Move history tracking
-- ✅ Win/Draw detection
+- ✅ 完整游戏规则（§ 附录 B）
+- ✅ 所有用户故事 US1-US10（§ 附录 C）
+- ✅ MVC 架构，独立 model 包
+- ✅ 仅使用标准库（无外部依赖）
+- ✅ JSON 格式存档/读档
+- ✅ 撤销/重做（10 层）
+- ✅ 带控制的回放系统
+- ✅ 移动历史记录
+- ✅ 胜负/平局检测
 
-## Author
-
-Developed for COMP3211 Project 2025
-
-## License
-
-Educational project for academic use.
