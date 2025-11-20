@@ -84,7 +84,7 @@ class Board:
         ]
         
         for piece_type, row, col in red_pieces:
-            self.grid[row][col] = Piece(piece_type, Player.RED, row, col)
+            self.grid[row][col] = Piece.create(piece_type, Player.RED, row, col)
         
         # BLUE pieces (top, rows 6-8, mirror of RED)
         blue_pieces = [
@@ -99,7 +99,7 @@ class Board:
         ]
         
         for piece_type, row, col in blue_pieces:
-            self.grid[row][col] = Piece(piece_type, Player.BLUE, row, col)
+            self.grid[row][col] = Piece.create(piece_type, Player.BLUE, row, col)
     
     def get_piece(self, row: int, col: int) -> Optional[Piece]:
         """Get piece at specified position."""
@@ -191,7 +191,7 @@ class Board:
             for col in range(self.COLS):
                 piece = self.get_piece(row, col)
                 if piece:
-                    new_piece = Piece(piece.piece_type, piece.owner, row, col)
+                    new_piece = Piece.create(piece.piece_type, piece.owner, row, col)
                     new_board.set_piece(row, col, new_piece)
         return new_board
     

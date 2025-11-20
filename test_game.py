@@ -68,8 +68,8 @@ def test_rat_vs_elephant():
     
     # Place RED rat and BLUE elephant next to each other
     from model.piece import Piece
-    rat = Piece(PieceType.RAT, Player.RED, 4, 4)
-    elephant = Piece(PieceType.ELEPHANT, Player.BLUE, 4, 5)
+    rat = Piece.create(PieceType.RAT, Player.RED, 4, 4)
+    elephant = Piece.create(PieceType.ELEPHANT, Player.BLUE, 4, 5)
     
     board.set_piece(4, 4, rat)
     board.set_piece(4, 5, elephant)
@@ -92,8 +92,8 @@ def test_water_movement():
     board = Board()
     
     from model.piece import Piece
-    rat = Piece(PieceType.RAT, Player.RED, 3, 2)
-    lion = Piece(PieceType.LION, Player.RED, 3, 2)
+    rat = Piece.create(PieceType.RAT, Player.RED, 3, 2)
+    lion = Piece.create(PieceType.LION, Player.RED, 3, 2)
     
     board.set_piece(3, 2, rat)
     
