@@ -1,645 +1,714 @@
 # Jungle Game - MVC Architecture Design
 
-## Class Diagram
+## 1. MVC Architecture Overview
+
+### 1.1 High-Level MVC Structure
+
+```mermaid
+graph TB
+    subgraph "User Interface"
+        User[User/Player]
+    end
+    
+    subgraph "Controller Layer"
+        GC[GameController]
+    end
+    
+    subgraph "View Layer"
+        CV[CLIView]
+        RE[ReplayEngine]
+    end
+    
+    subgraph "Model Layer"
+        GS[GameState]
+        B[Board]
+        MV[MoveValidator]
+        P[Pieces]
+        M[Moves]
+    end
+    
+    User -->|Commands| GC
+    GC -->|Updates| GS
+    GC -->|Display Requests| CV
+    GC -->|Create| RE
+    
+    CV -->|Read Only| GS
+    CV -->|Read Only| B
+    
+    RE -->|Read Only| M
+    RE -->|Reconstruct| B
+    
+    GS -->|Contains| B
+    GS -->|Records| M
+    GS -->|Uses| MV
+    
+    B -->|Contains| P
+    MV -->|Validates| P
+    MV -->|Validates on| B
+    
+    GC -->|Display| User
+    
+    style User fill:#e1f5ff
+    style GC fill:#fff4e1
+    style CV fill:#f0ffe1
+    style RE fill:#f0ffe1
+    style GS fill:#ffe1f5
+    style B fill:#ffe1f5
+    style MV fill:#ffe1f5
+    style P fill:#ffe1f5
+    style M fill:#ffe1f5
+```
+
+### 1.2 MVC Separation Principles
+
+#### **Model (Pink) - Pure Game Logic**
+- **Independence**: No knowledge of View or Controller
+- **Responsibility**: Game rules, state management, validation
+- **Components**: 
+  - `GameState`: Master game manager
+  - `Board`: Grid and terrain management
+  - `Pieces`: 8 types with behaviors
+  - `MoveValidator`: Rule enforcement
+  - `Move`: Move records
+
+#### **View (Green) - Presentation Only**
+- **Independence**: Only reads Model, never modifies
+- **Responsibility**: Display information to user
+- **Components**:
+  - `CLIView`: ASCII board rendering, messages
+  - `ReplayEngine`: Historical game playback
+
+#### **Controller (Yellow) - Coordinator**
+- **Responsibility**: Mediate between Model and View
+- **Only component** that knows both Model and View
+- **Components**:
+  - `GameController`: Parse commands, coordinate actions
+
+### 1.3 Interaction Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant C as Controller
+    participant M as Model
+    participant V as View
+    
+    Note over U,V: Example: move E3 E4
+    
+    U->>C: Input "move E3 E4"
+    activate C
+    
+    C->>C: Parse command
+    Note right of C: Convert E3→(2,4)<br/>E4→(3,4)
+    
+    C->>M: make_move(2,4,3,4)
+    activate M
+    
+    M->>M: Validate move
+    M->>M: Update board
+    M->>M: Record history
+    
+    M-->>C: Success/Failure
+    deactivate M
+    
+    C->>V: display_board()
+    activate V
+    
+    V->>M: Read board state
+    M-->>V: Board data
+    
+    V->>V: Render ASCII
+    V-->>U: Display board
+    deactivate V
+    
+    deactivate C
+```
+
+---
+
+## 2. Detailed Class Diagrams
+
+### 2.1 Model Package - Core Classes
 
 ```mermaid
 classDiagram
-    %% ========================================
-    %% MODEL PACKAGE - Game Logic Layer
-    %% ========================================
-    
-    namespace Model {
-        class Board {
-            -Piece[][] grid
-            -SquareType[][] terrain
-            -int ROWS = 9
-            -int COLS = 7
-            -List~Tuple~ RED_TRAPS
-            -List~Tuple~ BLUE_TRAPS
-            -List~Tuple~ WATER_SQUARES
-            -Tuple RED_DEN
-            -Tuple BLUE_DEN
-            +__init__()
-            +setup_initial_position()
-            +get_piece(row, col) Piece
-            +set_piece(row, col, piece)
-            +remove_piece(row, col) Piece
-            +move_piece(from_row, from_col, to_row, to_col) Piece
-            +get_terrain(row, col) SquareType
-            +is_water(row, col) bool
-            +is_trap(row, col, player) bool
-            +is_den(row, col, player) bool
-            +is_opponent_den(row, col, player) bool
-            +get_all_pieces(player) List~Piece~
-            +copy() Board
-        }
-        
-        class SquareType {
-            <<enumeration>>
-            NORMAL
-            TRAP
-            DEN
-            WATER
-        }
-        
-        class Piece {
-            <<abstract>>
-            -PieceType piece_type
-            -Player owner
-            -int row
-            -int col
-            +__init__(piece_type, owner, row, col)
-            +rank() int
-            +get_symbol() str
-            +get_name() str
-            +can_swim() bool
-            +can_jump() bool
-            +to_dict() dict
-            +from_dict(data)$ Piece
-        }
-        
-        class PieceType {
-            <<enumeration>>
-            RAT = 1
-            CAT = 2
-            DOG = 3
-            WOLF = 4
-            LEOPARD = 5
-            TIGER = 6
-            LION = 7
-            ELEPHANT = 8
-        }
-        
-        class Player {
-            <<enumeration>>
-            RED
-            BLUE
-        }
-        
-        class Rat {
-            +can_swim() bool
-            +special_ability() "Can defeat Elephant, can enter water"
-        }
-        
-        class Elephant {
-            +special_weakness() "Defeated by Rat"
-        }
-        
-        class Lion {
-            +can_jump() bool
-            +special_ability() "Can jump over river (3 squares)"
-        }
-        
-        class Tiger {
-            +can_jump() bool
-            +special_ability() "Can jump over river (3 squares)"
-        }
-        
-        class Cat {
-            +rank() int
-        }
-        
-        class Dog {
-            +rank() int
-        }
-        
-        class Wolf {
-            +rank() int
-        }
-        
-        class Leopard {
-            +rank() int
-        }
-        
-        class Move {
-            -Piece piece
-            -int from_row
-            -int from_col
-            -int to_row
-            -int to_col
-            -Piece captured
-            -int move_number
-            +__init__(piece, from_row, from_col, to_row, to_col, captured, move_number)
-            +to_notation(board) str
-            +to_dict() dict
-            +from_dict(data)$ Move
-        }
-        
-        class MoveValidator {
-            -Board board
-            +__init__(board)
-            +is_valid_move(piece, to_row, to_col) Tuple~bool, str~
-            +can_capture(attacker, attacker_pos, defender, defender_pos) Tuple~bool, str~
-            +get_legal_moves(piece) List~Tuple~
-            -_is_orthogonal(from_row, from_col, to_row, to_col) bool
-            -_is_jump_move(from_row, from_col, to_row, to_col) bool
-            -_validate_jump(from_row, from_col, to_row, to_col) Tuple~bool, str~
-            -_get_jump_path_squares(from_row, from_col, to_row, to_col) List
-            -_get_jump_targets(from_row, from_col) List
-        }
-        
-        class GameState {
-            -Board board
-            -Player current_player
-            -List~Move~ move_history
-            -int move_count_no_capture
-            -List~str~ position_history
-            -str game_status
-            -Dict captured_pieces
-            -List~dict~ undo_stack
-            -List~dict~ redo_stack
-            -int MAX_UNDO_LEVELS = 10
-            -int MAX_MOVES_WITHOUT_CAPTURE = 50
-            +__init__()
-            +start_new_game()
-            +make_move(from_row, from_col, to_row, to_col) Tuple~bool, str~
-            +undo() Tuple~bool, str~
-            +redo() Tuple~bool, str~
-            +save_to_file(filename) Tuple~bool, str~
-            +load_from_file(filename) Tuple~bool, str~
-            -_save_undo_state()
-            -_restore_state(state)
-            -_check_game_end(to_row, to_col)
-            -_has_legal_moves(player) bool
-            -_get_position_hash() str
-            -_check_threefold_repetition() bool
-            -_serialize_board() List
-            -_deserialize_board(data)
-        }
-        
-        class GameStatus {
-            <<enumeration>>
-            IN_PROGRESS
-            RED_WIN
-            BLUE_WIN
-            DRAW
-        }
+    %% Piece Hierarchy
+    class Piece {
+        <<abstract>>
+        #PieceType piece_type
+        #Player owner
+        #int row
+        #int col
+        +rank() int
+        +can_swim() bool
+        +can_jump() bool
+        +get_symbol() str
     }
     
-    %% ========================================
-    %% VIEW PACKAGE - Presentation Layer
-    %% ========================================
+    class Rat {
+        +can_swim() bool
+        +rank() 1
+    }
     
-    namespace View {
-        class CLIView {
-            -Board board
-            +__init__()
-            +display_board(board, highlight_positions)
-            +display_game_status(game_state)
-            +display_move_history(game_state, last_n)
-            +display_legal_moves(board, piece, legal_moves)
-            +get_user_input(prompt) str
-            +display_message(message)
-            +display_error(error)
-            +display_success(message)
-            +display_menu()
-            +display_game_over(game_status, game_state)
-            +confirm_action(prompt) bool
-            +display_replay_controls()
-            +clear_screen()
-        }
+    class Cat {
+        +rank() 2
+    }
+    
+    class Dog {
+        +rank() 3
+    }
+    
+    class Wolf {
+        +rank() 4
+    }
+    
+    class Leopard {
+        +rank() 5
+    }
+    
+    class Tiger {
+        +can_jump() bool
+        +rank() 6
+    }
+    
+    class Lion {
+        +can_jump() bool
+        +rank() 7
+    }
+    
+    class Elephant {
+        +rank() 8
+    }
+    
+    %% Inheritance relationships
+    Piece <|-- Rat
+    Piece <|-- Cat
+    Piece <|-- Dog
+    Piece <|-- Wolf
+    Piece <|-- Leopard
+    Piece <|-- Tiger
+    Piece <|-- Lion
+    Piece <|-- Elephant
+    
+    %% Enums
+    class PieceType {
+        <<enumeration>>
+        RAT = 1
+        CAT = 2
+        DOG = 3
+        WOLF = 4
+        LEOPARD = 5
+        TIGER = 6
+        LION = 7
+        ELEPHANT = 8
+    }
+    
+    class Player {
+        <<enumeration>>
+        RED
+        BLUE
+    }
+    
+    Piece --> PieceType
+    Piece --> Player
+```
+
+### 2.2 Model Package - Board and Terrain
+
+```mermaid
+classDiagram
+    class Board {
+        -Piece[][] grid
+        -SquareType[][] terrain
+        +ROWS : int = 9
+        +COLS : int = 7
+        +WATER_SQUARES : List
+        +RED_DEN : Tuple
+        +BLUE_DEN : Tuple
+        +setup_initial_position()
+        +get_piece(row, col) Piece
+        +set_piece(row, col, piece)
+        +move_piece(from, to) Piece
+        +get_terrain(row, col) SquareType
+        +is_water(row, col) bool
+        +is_trap(row, col, player) bool
+    }
+    
+    class SquareType {
+        <<enumeration>>
+        NORMAL
+        TRAP
+        DEN
+        WATER
+    }
+    
+    class Piece {
+        <<abstract>>
+    }
+    
+    Board *-- "0..16" Piece : contains
+    Board --> SquareType : uses
+```
+
+### 2.3 Model Package - Move and Validation
+
+```mermaid
+classDiagram
         
-        class ReplayEngine {
-            -List~Move~ moves
-            -int current_index
-            -float speed
-            -bool is_playing
-            -Board board
-            +__init__(game_state)
-            +reset()
-            +step_forward() bool
-            +step_backward() bool
-            +goto_move(move_number) bool
-            +play_auto(view, delay)
-            +stop_playing()
-            +set_speed(multiplier)
-            +get_current_move() Move
-            +get_progress() Tuple
-        }
+    class Move {
+        -Piece piece
+        -int from_row, from_col
+        -int to_row, to_col
+        -Piece captured
+        -int move_number
+        +to_notation() str
+        +to_dict() dict
     }
     
-    %% ========================================
-    %% CONTROLLER PACKAGE - Coordination Layer
-    %% ========================================
-    
-    namespace Controller {
-        class GameController {
-            -GameState game_state
-            -CLIView view
-            +__init__()
-            +start()
-            +game_loop()
-            +handle_command(command)
-            +handle_move(from_pos, to_pos)
-            +handle_show_moves(pos)
-            +handle_undo()
-            +handle_redo()
-            +handle_history()
-            +handle_save(filename)
-            +handle_load(filename)
-            +handle_new_game()
-            +handle_replay()
-            +replay_mode()
-        }
+    class MoveValidator {
+        -Board board
+        +is_valid_move(piece, to_row, to_col) bool
+        +can_capture(attacker, defender) bool
+        +get_legal_moves(piece) List
+        -_validate_jump() bool
     }
     
-    %% ========================================
-    %% RELATIONSHIPS
-    %% ========================================
+    class Piece {
+        <<abstract>>
+    }
     
-    %% Inheritance (Piece hierarchy)
-    Piece <|-- Rat : extends
-    Piece <|-- Cat : extends
-    Piece <|-- Dog : extends
-    Piece <|-- Wolf : extends
-    Piece <|-- Leopard : extends
-    Piece <|-- Tiger : extends
-    Piece <|-- Lion : extends
-    Piece <|-- Elephant : extends
+    class Board {
+        <<abstract>>
+    }
     
-    %% Composition (Board contains Pieces)
-    Board *-- "16" Piece : contains
-    Board o-- SquareType : uses
-    
-    %% Association (Piece uses enums)
-    Piece --> PieceType : has
-    Piece --> Player : owned by
-    
-    %% Composition (Move contains Pieces)
-    Move *-- "1..2" Piece : piece + captured
-    
-    %% Association (MoveValidator validates on Board)
+    Move --> Piece : references
     MoveValidator --> Board : validates on
     MoveValidator --> Piece : validates
+```
+
+### 2.4 Model Package - GameState
+
+```mermaid
+classDiagram
+        
+    class GameState {
+        -Board board
+        -Player current_player
+        -List~Move~ move_history
+        -List~dict~ undo_stack
+        -List~dict~ redo_stack
+        -int move_count_no_capture
+        +MAX_UNDO_LEVELS : int = 10
+        +start_new_game()
+        +make_move(from, to) bool
+        +undo() bool
+        +redo() bool
+        +save_to_file(filename) bool
+        +load_from_file(filename) bool
+    }
     
-    %% Composition (GameState contains Board and Moves)
+    class GameStatus {
+        <<enumeration>>
+        IN_PROGRESS
+        RED_WIN
+        BLUE_WIN
+        DRAW
+    }
+    
+    class Board {
+        <<abstract>>
+    }
+    
+    class Move {
+        <<abstract>>
+    }
+    
+    class MoveValidator {
+        <<abstract>>
+    }
+    
     GameState *-- "1" Board : manages
     GameState *-- "*" Move : records
-    GameState o-- GameStatus : has status
+    GameState --> GameStatus : has
     GameState --> MoveValidator : uses
+```
+
+### 2.5 View Package
+
+```mermaid
+classDiagram
+    class CLIView {
+        +display_board(board)
+        +display_game_status(game_state)
+        +display_move_history(game_state)
+        +display_legal_moves(piece, moves)
+        +get_user_input() str
+        +display_menu()
+        +display_game_over()
+    }
     
-    %% Association (View displays Model)
-    CLIView --> Board : displays
-    CLIView --> GameState : reads from
-    CLIView --> Piece : displays
+    class ReplayEngine {
+        -List~Move~ moves
+        -int current_index
+        -Board board
+        +step_forward() bool
+        +step_backward() bool
+        +goto_move(n) bool
+        +play_auto() void
+    }
     
-    %% Composition (ReplayEngine uses Moves)
-    ReplayEngine *-- "*" Move : replays
-    ReplayEngine *-- "1" Board : reconstructs
+    class GameState {
+        <<abstract>>
+    }
     
-    %% Association (Controller coordinates Model and View)
-    GameController *-- "1" GameState : manages
-    GameController *-- "1" CLIView : uses
-    GameController --> ReplayEngine : creates
-    GameController --> MoveValidator : uses
+    class Board {
+        <<abstract>>
+    }
     
-    %% Notes for special interactions
-    note for Rat "Special: can_swim() returns True\nCan enter WATER squares\nCan defeat Elephant (rank 8)\nCannot be captured by land pieces when in water"
+    class Move {
+        <<abstract>>
+    }
     
-    note for Board "Tracks WATER_SQUARES:\nLeft River: A4-B6\nRight River: F4-G6\nRat interacts with water terrain"
+    CLIView --> GameState : reads
+    CLIView --> Board : reads
+    ReplayEngine --> Move : replays
+    ReplayEngine *-- Board : reconstructs
+```
+
+### 2.6 Controller Package
+
+```mermaid
+classDiagram
+    class GameController {
+        -GameState game_state
+        -CLIView view
+        +start()
+        +game_loop()
+        +handle_move()
+        +handle_undo()
+        +handle_redo()
+        +handle_save()
+        +handle_load()
+        +handle_replay()
+    }
     
-    note for MoveValidator "Validates Rat-River interaction:\n1. Check if destination is WATER\n2. Only Rat can enter (can_swim())\n3. Rat in water protected from land pieces\n4. Validates Lion/Tiger jumps (blocked by Rat in path)"
+    class GameState {
+        <<abstract>>
+    }
+    
+    class CLIView {
+        <<abstract>>
+    }
+    
+    class ReplayEngine {
+        <<abstract>>
+    }
+    
+    GameController *-- "1" GameState : owns
+    GameController *-- "1" CLIView : owns
+    GameController ..> ReplayEngine : creates
 ```
 
 ---
 
-## Detailed Architecture Explanation
+## 3. Rat-River 交互建模详解
 
-### 1. **Model Package** (Pure Game Logic)
+### 3.1 核心设计思路
 
-#### Core Classes:
+**问题**：如何实现"只有鼠能游泳"和"水中的鼠不能被陆地棋子吃掉"？
 
-**Board**
-- **Responsibility**: Manages the 7×9 grid and terrain
-- **Composition**: Contains 16 `Piece` objects (8 per player)
-- **Key Fields**:
-  - `grid[9][7]`: 2D array of Pieces
-  - `terrain[9][7]`: 2D array of SquareTypes
-  - `WATER_SQUARES`: List of water coordinates
-- **Independence**: No dependency on View or Controller
+**解决方案**：通过**多态 + 地形检测**实现
 
-**Piece (Abstract Base)**
-- **Hierarchy**: 8 concrete subclasses (Rat, Cat, Dog, Wolf, Leopard, Tiger, Lion, Elephant)
-- **Key Fields**:
-  - `piece_type`: PieceType enum (determines rank 1-8)
-  - `owner`: Player enum (RED/BLUE)
-  - `row`, `col`: Current position
-- **Polymorphism**: 
-  - `can_swim()`: Overridden by Rat (returns True)
-  - `can_jump()`: Overridden by Lion/Tiger (returns True)
+### 3.2 类图：Rat-River 交互
 
-**MoveValidator**
-- **Responsibility**: Validates all move rules
-- **Key Methods**:
-  - `is_valid_move()`: Checks terrain, distance, orthogonality
-  - `can_capture()`: Implements hierarchy and special rules
-  - `_validate_jump()`: Lion/Tiger river jump validation
-
-**GameState**
-- **Responsibility**: Manages complete game state
-- **Key Features**:
-  - Undo/Redo stacks (10 levels)
-  - Position history (threefold repetition detection)
-  - Save/Load to JSON
-  - Win/Draw condition checking
-
----
-
-### 2. **View Package** (Presentation Layer)
-
-**CLIView**
-- **Responsibility**: Display and user input
-- **Key Methods**:
-  - `display_board()`: ASCII board rendering
-  - `display_legal_moves()`: Highlight valid moves
-  - `display_game_status()`: Show turn, move count
-- **Dependency**: Reads from Model (Board, GameState) but never modifies
-
-**ReplayEngine**
-- **Responsibility**: Replay game history
-- **Key Features**:
-  - Step forward/backward through moves
-  - Auto-play with speed control
-  - Reconstruct board state at any move
-
----
-
-### 3. **Controller Package** (Coordination Layer)
-
-**GameController**
-- **Responsibility**: Coordinate Model and View
-- **Key Methods**:
-  - `handle_move()`: Parse input → Call GameState.make_move()
-  - `handle_show_moves()`: Get legal moves → Display via View
-  - `handle_save/load()`: Coordinate file operations
-  - `replay_mode()`: Create ReplayEngine → Coordinate playback
-- **MVC Hub**: Only component that knows about both Model and View
-
----
-
-## 3. Rat and River Interaction - Detailed Modeling
-
-### 3.1 Data Model
-
-```python
-# In Board class
-WATER_SQUARES = [
-    (3, 0), (3, 1), (4, 0), (4, 1), (5, 0), (5, 1),  # Left river (A4-B6)
-    (3, 5), (3, 6), (4, 5), (4, 6), (5, 5), (5, 6)   # Right river (F4-G6)
-]
-
-def is_water(self, row: int, col: int) -> bool:
-    return self.get_terrain(row, col) == SquareType.WATER
+```mermaid
+classDiagram
+    class Board {
+        +WATER_SQUARES : List~Tuple~
+        +is_water(row, col) bool
+    }
+    
+    class Piece {
+        <<abstract>>
+        +can_swim() bool
+    }
+    
+    class Rat {
+        +can_swim() bool
+        +rank() 1
+    }
+    
+    class Elephant {
+        +rank() 8
+    }
+    
+    class Lion {
+        +can_jump() bool
+        +rank() 7
+    }
+    
+    class MoveValidator {
+        -Board board
+        +is_valid_move(piece, to) bool
+        +can_capture(attacker, defender) bool
+        -_validate_jump(from, to) bool
+    }
+    
+    Piece <|-- Rat : "overrides can_swim()=True"
+    Piece <|-- Elephant
+    Piece <|-- Lion
+    
+    MoveValidator --> Board : "checks is_water()"
+    MoveValidator --> Piece : "calls can_swim()"
+    
+    Board --> Rat : "Rat can enter WATER"
+    Board --> Lion : "Lion jump blocked by Rat"
 ```
 
-### 3.2 Rat's Special Ability
+### 3.3 实现细节
 
+#### **步骤 1：定义水域位置（Board 类）**
 ```python
-# In Piece class (overridden by Rat)
-class Piece:
+class Board:
+    WATER_SQUARES = [
+        (3, 0), (3, 1), (4, 0), (4, 1), (5, 0), (5, 1),  # 左河 A4-B6
+        (3, 5), (3, 6), (4, 5), (4, 6), (5, 5), (5, 6)   # 右河 F4-G6
+    ]
+    
+    def is_water(self, row, col) -> bool:
+        return (row, col) in self.WATER_SQUARES
+```
+
+#### **步骤 2：定义游泳能力（Piece 多态）**
+```python
+class Piece:  # 抽象基类
     def can_swim(self) -> bool:
-        return False  # Default for all pieces
+        return False  # 默认：不能游泳
 
-class Rat(Piece):
+class Rat(Piece):  # 鼠 - 重写方法
     def can_swim(self) -> bool:
-        return True  # Only Rat can swim
+        return True  # 只有鼠能游泳
 ```
 
-### 3.3 Movement Validation
-
+#### **步骤 3：移动验证（MoveValidator）**
 ```python
-# In MoveValidator class
-def is_valid_move(self, piece: Piece, to_row: int, to_col: int) -> Tuple[bool, str]:
-    # Terrain check
-    if self.board.is_water(to_row, to_col):
-        if not piece.can_swim():
-            return False, "Cannot enter water"  # Blocks all except Rat
-    
-    # ... other validations
+class MoveValidator:
+    def is_valid_move(self, piece, to_row, to_col):
+        # 检查目标是否为水域
+        if self.board.is_water(to_row, to_col):
+            # 调用多态方法检查能力
+            if not piece.can_swim():
+                return False, "Cannot enter water"
+        
+        return True, ""
 ```
 
-### 3.4 Capture Protection
-
+#### **步骤 4：水中鼠的保护（MoveValidator）**
 ```python
-# In MoveValidator.can_capture()
-def can_capture(self, attacker: Piece, attacker_row: int, attacker_col: int,
-                defender: Piece, defender_row: int, defender_col: int) -> Tuple[bool, str]:
-    
-    # Rat in water protection
-    if defender.piece_type == PieceType.RAT and self.board.is_water(defender_row, defender_col):
+def can_capture(self, attacker, attacker_pos, defender, defender_pos):
+    # 如果防守方是在水中的鼠
+    if (defender.piece_type == PieceType.RAT and 
+        self.board.is_water(defender_pos[0], defender_pos[1])):
+        # 只有鼠能攻击水中的鼠
         if attacker.piece_type != PieceType.RAT:
             return False, "Only Rat can attack Rat in water"
     
-    # Rat can defeat Elephant (special rule)
+    # 鼠吃象特殊规则
     if attacker.piece_type == PieceType.RAT and defender.piece_type == PieceType.ELEPHANT:
         return True, ""
     
-    # Normal hierarchy
-    return attacker.rank >= defender.rank, ""
+    # 普通等级规则
+    return attacker.rank >= defender.rank
 ```
 
-### 3.5 Lion/Tiger Jump Blocking
-
+#### **步骤 5：跳河阻挡（MoveValidator）**
 ```python
-# In MoveValidator._validate_jump()
-def _validate_jump(self, from_row: int, from_col: int, to_row: int, to_col: int) -> Tuple[bool, str]:
-    water_squares = self._get_jump_path_squares(from_row, from_col, to_row, to_col)
+def _validate_jump(self, from_row, from_col, to_row, to_col):
+    # 获取跳跃路径上的3个水域格子
+    water_path = self._get_jump_path_squares(from_row, from_col, to_row, to_col)
     
-    # Check if any Rat is in the water path
-    for row, col in water_squares:
+    # 检查路径中是否有鼠
+    for row, col in water_path:
         piece = self.board.get_piece(row, col)
         if piece and piece.piece_type == PieceType.RAT:
-            return False, "Jump blocked by Rat"  # Rat blocks Lion/Tiger jumps
+            return False, "Jump blocked by Rat in water"
     
     return True, ""
 ```
 
-### 3.6 Interaction Flow Diagram
+### 3.4 交互流程图
 
-```
-┌─────────────────────────────────────────────────┐
-│ Rat-River Interaction Flow                      │
-└─────────────────────────────────────────────────┘
-
-1. MOVE ATTEMPT: Rat → Water Square
-   ┌───────────────────────────────────┐
-   │ MoveValidator.is_valid_move()     │
-   │   → board.is_water(destination)?  │
-   │   → piece.can_swim()?             │
-   │   → ✓ Allowed (Rat only)          │
-   └───────────────────────────────────┘
-
-2. CAPTURE ATTEMPT: Land Piece → Rat in Water
-   ┌───────────────────────────────────┐
-   │ MoveValidator.can_capture()       │
-   │   → defender.is_water()?          │
-   │   → attacker is Rat?              │
-   │   → ✗ Blocked (protection)        │
-   └───────────────────────────────────┘
-
-3. JUMP ATTEMPT: Lion/Tiger → Cross River
-   ┌───────────────────────────────────┐
-   │ MoveValidator._validate_jump()    │
-   │   → Get water squares in path     │
-   │   → Check each for Rat            │
-   │   → ✗ Blocked if Rat present      │
-   └───────────────────────────────────┘
-
-4. RAT VS ELEPHANT: Special Rule
-   ┌───────────────────────────────────┐
-   │ MoveValidator.can_capture()       │
-   │   → attacker == RAT?              │
-   │   → defender == ELEPHANT?         │
-   │   → ✓ Rat wins (rank 1 beats 8)  │
-   └───────────────────────────────────┘
-```
-
----
-
-## 4. Key Design Patterns
-
-### 4.1 **MVC Pattern**
-- **Separation**: Model knows nothing about View/Controller
-- **Independence**: View can be replaced (CLI → GUI) without changing Model
-- **Coordination**: Controller is the only mediator
-
-### 4.2 **Strategy Pattern**
-- `Piece.can_swim()` and `Piece.can_jump()`: Polymorphic behavior
-- Different pieces have different movement capabilities
-
-### 4.3 **Command Pattern**
-- `Move` class: Encapsulates move data
-- Enables Undo/Redo via state restoration
-
-### 4.4 **Memento Pattern**
-- `GameState.undo_stack`: Stores previous states
-- Supports reverting to earlier game positions
-
-### 4.5 **Facade Pattern**
-- `GameController`: Simplifies interaction between complex subsystems
-- Hides Model/View complexity from user commands
-
----
-
-## 5. Data Flow Example: "move E3 E4"
-
-```
-┌──────────────┐
-│ User Input   │  "move E3 E4"
-└──────┬───────┘
-       │
-       ▼
-┌──────────────────────────────────────┐
-│ Controller: GameController           │
-│  handle_move("E3", "E4")             │
-│   1. Parse notation → (2,4) → (3,4)  │
-└──────┬───────────────────────────────┘
-       │
-       ▼
-┌──────────────────────────────────────┐
-│ Model: GameState                     │
-│  make_move(2, 4, 3, 4)               │
-│   1. Get piece at (2,4) → Rat        │
-│   2. Validate via MoveValidator      │
-└──────┬───────────────────────────────┘
-       │
-       ▼
-┌──────────────────────────────────────┐
-│ Model: MoveValidator                 │
-│  is_valid_move(Rat, 3, 4)            │
-│   1. Check distance (1 square) ✓     │
-│   2. Check orthogonal ✓              │
-│   3. Check terrain (water?) → Yes    │
-│   4. Check can_swim() → Yes (Rat) ✓  │
-└──────┬───────────────────────────────┘
-       │ Valid = True
-       ▼
-┌──────────────────────────────────────┐
-│ Model: Board                         │
-│  move_piece(2, 4, 3, 4)              │
-│   1. Remove Rat from (2,4)           │
-│   2. Place Rat at (3,4) [water]      │
-└──────┬───────────────────────────────┘
-       │
-       ▼
-┌──────────────────────────────────────┐
-│ Model: GameState                     │
-│   1. Record Move in move_history     │
-│   2. Save state to undo_stack        │
-│   3. Switch current_player           │
-└──────┬───────────────────────────────┘
-       │ Success = True
-       ▼
-┌──────────────────────────────────────┐
-│ Controller: GameController           │
-│   Return success to user             │
-└──────┬───────────────────────────────┘
-       │
-       ▼
-┌──────────────────────────────────────┐
-│ View: CLIView                        │
-│  display_board(game_state.board)     │
-│   → Show Rat now at E4 (water)       │
-└──────────────────────────────────────┘
-```
-
----
-
-## 6. Extension Points
-
-### 6.1 Adding GUI View
-```python
-class GUIView:  # Parallel to CLIView
-    def display_board(self, board):
-        # Use tkinter to draw graphical board
-        pass
+```mermaid
+sequenceDiagram
+    participant P as Piece (Rat)
+    participant MV as MoveValidator
+    participant B as Board
     
-# In GameController
-self.view = GUIView()  # Change this line only
+    Note over P,B: Scenario 1: Rat enters water
+    
+    P->>MV: Try move to (3,4)
+    MV->>B: is_water(3,4)?
+    B-->>MV: True (WATER)
+    MV->>P: can_swim()?
+    P-->>MV: True (Rat can swim)
+    MV-->>P: ✓ Move allowed
+    
+    Note over P,B: Scenario 2: Elephant tries to capture Rat in water
+    
+    P->>MV: Elephant attacks Rat at (3,4)
+    MV->>B: is_water(3,4)?
+    B-->>MV: True (WATER)
+    MV->>P: attacker is RAT?
+    P-->>MV: False (Elephant)
+    MV-->>P: ✗ Attack blocked
+    
+    Note over P,B: Scenario 3: Lion jump blocked by Rat
+    
+    P->>MV: Lion jump from (2,0) to (6,0)
+    MV->>B: Get water path squares
+    B-->>MV: [(3,0), (4,0), (5,0)]
+    MV->>B: Check each square for Rat
+    B-->>MV: Rat found at (4,0)
+    MV-->>P: ✗ Jump blocked
 ```
 
-### 6.2 Adding AI Player
+---
+
+## 4. 架构优势
+
+### 4.1 **Model Package** (纯游戏逻辑)
+
+- **Board**: 管理 7×9 棋盘和地形，包含16个棋子
+- **Piece 继承体系**: 8个具体类（鼠、猫、狗、狼、豹、虎、狮、象）
+  - 多态方法：`can_swim()`（鼠重写为True）、`can_jump()`（狮虎重写为True）
+- **MoveValidator**: 验证所有游戏规则（地形、距离、吃子、跳河）
+- **GameState**: 管理游戏状态、撤销/重做、存档/读档、胜负判定
+
+**独立性**：Model 层不依赖 View 或 Controller，可独立测试
+
+### 4.2 **View Package** (展示层)
+
+- **CLIView**: ASCII 棋盘显示，从 Model 读取但不修改
+- **ReplayEngine**: 回放历史棋局，可前进/后退/自动播放
+
+**单向依赖**：View 只读取 Model，不调用 Model 的修改方法
+
+### 4.3 **Controller Package** (协调层)
+
+- **GameController**: MVC 的中枢，唯一同时了解 Model 和 View 的组件
+  - 解析用户输入 → 调用 Model 方法
+  - 获取 Model 状态 → 调用 View 显示
+  - 创建和管理 ReplayEngine
+
+**中介作用**：Model 和 View 之间的所有交互都通过 Controller
+
+### 4.4 **MVC 严格分离的好处**
+
+| 层级 | 职责 | 依赖关系 | 可替换性 |
+|------|------|----------|----------|
+| Model | 游戏逻辑 | 零依赖 | ✓ 可复用于 GUI |
+| View | 界面显示 | 依赖 Model（只读） | ✓ 可替换为 tkinter GUI |
+| Controller | 协调 | 依赖 Model + View | ✓ 可扩展为 AI 对手 |
+
+---
+
+## 5. 核心设计模式
+
+### 5.1 **MVC Pattern** (Model-View-Controller)
+- **分离关注点**: Model 不知道 View 存在
+- **可替换性**: CLI → GUI 只需修改 Controller 的 View 引用
+
+### 5.2 **Strategy Pattern** (策略模式)
+- `Piece.can_swim()` / `can_jump()`: 不同棋子有不同能力
+- 通过多态避免 `if-elif` 判断棋子类型
+
+### 5.3 **Command Pattern** (命令模式)
+- `Move` 类封装走棋操作
+- 支持撤销（保存移动前状态）、重做
+
+### 5.4 **Memento Pattern** (备忘录模式)
+- `GameState.undo_stack`: 保存历史状态
+- 支持恢复到任意历史位置
+
+### 5.5 **Facade Pattern** (外观模式)
+- `GameController` 简化 Model/View 的复杂交互
+- 用户只需输入命令，无需了解内部实现
+
+---
+
+## 6. 数据流示例："move E3 E4"
+
+```
+用户输入 "move E3 E4"
+    ↓
+GameController.handle_move("E3", "E4")
+    ↓ 解析坐标 (2,4) → (3,4)
+GameState.make_move(2, 4, 3, 4)
+    ↓ 获取棋子 → Rat
+MoveValidator.is_valid_move(Rat, 3, 4)
+    ↓ 检查距离、方向、地形
+    ↓ board.is_water(3,4)? → True
+    ↓ Rat.can_swim()? → True ✓
+Board.move_piece(2, 4, 3, 4)
+    ↓ 移动鼠到水域
+GameState 记录移动、保存状态、切换玩家
+    ↓
+Controller 返回成功
+    ↓
+CLIView.display_board() 显示更新后的棋盘
+```
+
+---
+
+## 7. 扩展性设计
+
+### 7.1 添加 GUI 界面
+```python
+class GUIView:  # 替换 CLIView
+    def display_board(self, board):
+        # 使用 tkinter 绘制图形界面
+        pass
+
+# 在 GameController.__init__() 中
+self.view = GUIView()  # 只需修改这一行
+```
+
+### 7.2 添加 AI 对手
 ```python
 class AIController(GameController):
-    def get_ai_move(self, game_state) -> Tuple[int, int, int, int]:
-        # Implement minimax or MCTS
-        pass
+    def get_ai_move(self, game_state):
+        # 实现 minimax 或 MCTS 算法
+        return best_move
 ```
 
-### 6.3 Network Multiplayer
+### 7.3 网络对战
 ```python
 class NetworkGameState(GameState):
     def make_move(self, ...):
         super().make_move(...)
-        self.send_to_server(move)  # Sync with remote player
+        self.sync_to_server(move)  # 同步到远程玩家
 ```
 
 ---
 
-## Summary
+## 8. 总结
 
-### ✅ **Model Package**
-- `Board`: Manages grid and terrain (including WATER squares)
-- `Piece` hierarchy: 8 subclasses with polymorphic abilities
-- `Rat`: Overrides `can_swim()` to enable water entry
-- `MoveValidator`: Enforces all rules including Rat-River interaction
-- `GameState`: Complete game management with undo/save/replay
+### ✅ **MVC 架构优势**
+- **Model**: 纯逻辑，零 UI 依赖，可复用
+- **View**: 纯展示，可替换（CLI/GUI/Web）
+- **Controller**: 中介协调，易扩展（AI/网络）
 
-### ✅ **View Package**
-- `CLIView`: ASCII display with no game logic
-- `ReplayEngine`: Reconstruct and display game history
+### ✅ **Rat-River 交互建模**
+1. **Board**: 定义 `WATER_SQUARES` 位置
+2. **Rat**: 重写 `can_swim()=True`（多态）
+3. **MoveValidator**: 检查 `board.is_water()` + `piece.can_swim()`
+4. **保护机制**: 水中鼠免疫陆地棋子攻击
+5. **跳河阻挡**: 鼠阻挡狮虎跳河
+6. **特殊规则**: 鼠吃象（不论位置）
 
-### ✅ **Controller Package**
-- `GameController`: Coordinates Model ↔ View
-- Handles all user commands
-- Creates and manages ReplayEngine
+### ✅ **代码质量**
+- **可测试**: Model 层可独立单元测试
+- **可维护**: 清晰的职责划分
+- **可扩展**: 支持新棋子类型、新 View、新功能
 
-### ✅ **Rat-River Interaction**
-1. **Data Model**: `Board.WATER_SQUARES` defines river locations
-2. **Ability Model**: `Rat.can_swim()` returns True (polymorphism)
-3. **Movement Validation**: `MoveValidator` checks terrain vs ability
-4. **Capture Protection**: Rat in water immune to land pieces
-5. **Jump Blocking**: Rat in water blocks Lion/Tiger jumps
-6. **Special Rule**: Rat defeats Elephant regardless of location
-
-This architecture strictly follows MVC principles with clear separation of concerns and supports all game features including the special Rat-River interactions.
+该架构严格遵守 MVC 原则，通过多态和地形检测优雅实现了鼠-河交互的所有规则。
