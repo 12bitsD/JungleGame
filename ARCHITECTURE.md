@@ -660,38 +660,7 @@ CLIView.display_board() 显示更新后的棋盘
 
 ---
 
-## 7. 扩展性设计
-
-### 7.1 添加 GUI 界面
-```python
-class GUIView:  # 替换 CLIView
-    def display_board(self, board):
-        # 使用 tkinter 绘制图形界面
-        pass
-
-# 在 GameController.__init__() 中
-self.view = GUIView()  # 只需修改这一行
-```
-
-### 7.2 添加 AI 对手
-```python
-class AIController(GameController):
-    def get_ai_move(self, game_state):
-        # 实现 minimax 或 MCTS 算法
-        return best_move
-```
-
-### 7.3 网络对战
-```python
-class NetworkGameState(GameState):
-    def make_move(self, ...):
-        super().make_move(...)
-        self.sync_to_server(move)  # 同步到远程玩家
-```
-
----
-
-## 8. 总结
+###### 8. 总结
 
 ### ✅ **MVC 架构优势**
 - **Model**: 纯逻辑，零 UI 依赖，可复用
