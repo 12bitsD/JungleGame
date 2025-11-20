@@ -154,9 +154,7 @@ class MoveValidator:
     def _validate_jump(self, from_row: int, from_col: int,
                       to_row: int, to_col: int) -> Tuple[bool, str]:
         """Validate river jump for Lion/Tiger."""
-        # Check if jump is horizontal or vertical
-        if from_row != to_row and from_col != to_col:
-            return False, "Can only jump horizontally or vertically"
+        # Note: Orthogonality is already checked in is_valid_move
         
         # Get the water squares in the jump path
         water_squares = self._get_jump_path_squares(from_row, from_col, to_row, to_col)
