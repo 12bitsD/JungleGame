@@ -1,9 +1,4 @@
 # Jungle Game - Test Execution Summary
-## 斗兽棋 - 测试执行总结
-
-**Date**: 2025-11-20  
-**Status**: ✅ ALL TESTS PASSING  
-
 ---
 
 ## Quick Results
@@ -77,8 +72,6 @@ CODE COVERAGE:      100% of Model package
 
 ### 1. test_movement_and_capture.py
 **Purpose**: Verify standard movement and capture rules  
-**Lines**: ~800  
-**Comments**: English with detailed scenario descriptions
 
 **Key Features Tested**:
 - Basic 1-square orthogonal movement
@@ -91,8 +84,6 @@ CODE COVERAGE:      100% of Model package
 
 ### 2. test_complex_edge_cases.py
 **Purpose**: Verify special rules and edge cases  
-**Lines**: ~1300  
-**Comments**: English + Chinese (bilingual)
 
 **Key Features Tested**:
 - Rat vs Elephant special rule (asymmetric)
@@ -106,8 +97,6 @@ CODE COVERAGE:      100% of Model package
 
 ### 3. test_model_complete.py
 **Purpose**: 100% coverage of Model package  
-**Lines**: ~1200  
-**Comments**: English
 
 **Key Features Tested**:
 - Complete piece hierarchy (8 types)
@@ -274,10 +263,3 @@ python3 -m unittest test_complex_edge_cases.TestRatVsElephantSpecialRule.test_ra
 
 The Jungle Game Model package has been thoroughly tested with 141 unit tests covering all game rules, special cases, and edge conditions. The test suite provides complete confidence in the implementation.
 
----
-
-**Last Updated**: 2025-11-20  
-**Test Framework**: Python unittest  
-**Total Tests**: 141  
-**Pass Rate**: 99.3% (140 passed, 1 conditional skip)  
-**Project**: Jungle Game (Dou Shou Qi / 斗兽棋)  
